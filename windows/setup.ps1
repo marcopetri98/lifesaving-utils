@@ -12,6 +12,7 @@ winget install --id Microsoft.PowerToys --source winget
 winget install --id Nextcloud.NextcloudDesktop --source winget
 
 # Entertainment
+winget install --id VideoLAN.VLC --source winget
 winget install --id Spotify.Spotify --source winget
 
 # Writing and office apps
