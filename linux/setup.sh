@@ -79,7 +79,8 @@ apt-get install -y ca-certificates \
     gnome-themes-extra \
     gtk2-engines-murrine \
     sassc \
-    gawk
+    gawk \
+    zip
 curl -sL https://raw.githubusercontent.com/retorquere/zotero-pkg/master/install.sh | bash
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 snap install gedit

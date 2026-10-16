@@ -62,7 +62,8 @@ sudo apt-get install -y \
    squashfs-tools-ng \
    uidmap \
    wget \
-   zlib1g-dev
+   zlib1g-dev \
+   zip
 
 # Only from ubuntu 24.04 and newer
 sudo apt-get install -y libsubid-dev
