@@ -1,6 +1,8 @@
-# sh-utils
+# lifesaving-utils
 
-A fully reproducible way to install and configure an operating system, on **Windows** and on **Linux**.
+The scripts that save my life every time I get a new machine: a fully reproducible way to install and
+configure an operating system on **Windows** and on **Linux**, to set up a **WSL** distribution for
+development, and to carry my **agent skills for Claude** from one place to the next.
 
 The goal of this repository is simple: after a clean install, a handful of scripts should be enough to
 get a machine back to a known, working state — the same applications, the same theming, the same
@@ -18,6 +20,7 @@ package lists for your own; the structure is meant to make that easy.
 - [Repository layout](#repository-layout)
 - [Syncing work across devices](#syncing-work-across-devices)
 - [Windows setup](#windows-setup)
+- [WSL setup](#wsl-setup)
 - [Linux setup](#linux-setup)
   - [Flags](#flags)
   - [Work profile and the Politecnico di Milano VPN](#work-profile-and-the-politecnico-di-milano-vpn)
@@ -25,8 +28,10 @@ package lists for your own; the structure is meant to make that easy.
   - [What the base setup installs](#what-the-base-setup-installs)
   - [After the setup](#after-the-setup)
 - [Headless / server setup](#headless--server-setup)
+- [SingularityCE](#singularityce)
 - [Commands installed on your PATH](#commands-installed-on-your-path)
 - [Extra PowerShell utilities](#extra-powershell-utilities)
+- [Agent skills for Claude](#agent-skills-for-claude)
 - [Notes and caveats](#notes-and-caveats)
 - [License](#license)
 
@@ -37,26 +42,33 @@ package lists for your own; the structure is meant to make that easy.
 ```
 .
 ├── windows/                     # Entry points for a fresh Windows install
-│   ├── setup.ps1                #   Base system: apps, dev tools, research tools
-│   └── gaming.ps1               #   Game launchers, monitoring, gaming extras
+│   ├── setup.ps1                #   Base system: apps, dev tools, research tools, CUDA
+│   ├── gaming.ps1               #   Game launchers, monitoring, gaming extras
+│   ├── latex.ps1                #   TeX Live distribution
+│   └── wsl.sh                   #   Run *inside* WSL: SSH keys, Homebrew, Mutagen, SingularityCE
 ├── powershell/                  # Standalone PowerShell utilities
 │   ├── sync-devices.ps1         #   Move work-in-progress changes between devices
 │   ├── disks.ps1                #   Create the standard folder structure on a data disk
 │   └── poetry.ps1               #   Per-python-version Poetry environment variables
-└── linux/                       # Entry points and building blocks for a fresh Linux install
-    ├── setup.sh                 #   Main desktop setup (run this one)
-    ├── server.sh                #   Minimal headless/server setup
-    ├── work.sh                  #   Work profile (incl. Politecnico di Milano VPN)
-    ├── robotics.sh              #   NVIDIA container toolkit, Vulkan, Isaac Sim
-    ├── ros2.sh                  #   ROS 2 Jazzy, Nav2 and the Isaac Sim ROS workspaces
-    ├── install_commands.sh      #   Installs linux/commands/* into ~/.local/bin and fixes PATH
-    ├── commands/                #   Small commands that end up on your PATH
-    │   ├── sync-devices         #     Move work-in-progress changes between devices
-    │   └── update_system        #     apt + snap + flatpak update in one shot
-    ├── installation_scripts/    #   Reusable installers (docker, discord, Isaac Sim, …)
-    ├── extensions/              #   GNOME extension list + exported dconf settings
-    ├── applications/            #   .desktop launchers installed for the user
-    └── autostart/               #   .desktop autostart entries installed for the user
+├── linux/                       # Entry points and building blocks for a fresh Linux install
+│   ├── setup.sh                 #   Main desktop setup (run this one)
+│   ├── server.sh                #   Minimal headless/server setup
+│   ├── work.sh                  #   Work profile (incl. Politecnico di Milano VPN)
+│   ├── robotics.sh              #   NVIDIA container toolkit, Vulkan, Isaac Sim
+│   ├── ros2.sh                  #   ROS 2 Jazzy, Nav2 and the Isaac Sim ROS workspaces
+│   ├── install_singularity.sh   #   Go + SingularityCE built from source (standalone)
+│   ├── install_commands.sh      #   Installs linux/commands/* into ~/.local/bin and fixes PATH
+│   ├── commands/                #   Small commands that end up on your PATH
+│   │   ├── sync-devices         #     Move work-in-progress changes between devices
+│   │   └── update_system        #     apt + snap + flatpak update in one shot
+│   ├── installation_scripts/    #   Reusable installers (docker, discord, Isaac Sim, …)
+│   ├── extensions/              #   GNOME extension list + exported dconf settings
+│   ├── applications/            #   .desktop launchers installed for the user
+│   └── autostart/               #   .desktop autostart entries installed for the user
+└── agents-skills/               # Agent skills for Claude, one folder per skill
+    ├── <skill-name>/SKILL.md    #   The skill itself (frontmatter + instructions)
+    ├── make_zips.ps1            #   Zip every skill folder (Windows)
+    └── make_zips.sh             #   Zip every skill folder (Linux)
 ```
 
 ---
@@ -118,8 +130,8 @@ Windows apply cleanly on Linux and vice versa.
 ## Windows setup
 
 **Prerequisites:** a clean Windows install with `winget` available (App Installer from the Microsoft
-Store). Run the scripts from an elevated PowerShell prompt; a couple of steps (Chocolatey/FileZilla and
-the Nsight Systems installer) will additionally prompt for confirmation on their own.
+Store). Run the scripts from an elevated PowerShell prompt; a couple of steps (Chocolatey/FileZilla, the
+NVIDIA CUDA installer and the TeX Live installer) will additionally prompt for confirmation on their own.
 
 If script execution is blocked, allow it for the current session first:
 
@@ -136,14 +148,16 @@ cd windows
 
 This installs, via `winget`:
 
-- **System basics:** PowerShell 7, Vivaldi, Acrobat Reader, Bitwarden, 7-Zip, Greenshot, OBS Studio,
-  Thunderbird, PowerToys, Nextcloud Desktop
-- **Entertainment:** Spotify
-- **Office and writing:** Microsoft Teams, Obsidian, LibreOffice
+- **System basics:** PowerShell 7, Vivaldi, Acrobat Reader, PDFgear, Bitwarden, 7-Zip, Greenshot,
+  OBS Studio, Thunderbird, PowerToys, Nextcloud Desktop
+- **Entertainment:** VLC, Spotify
+- **Office and writing:** Microsoft Teams, Obsidian, LibreOffice, Anytype
 - **Development:** Chocolatey, Git, Docker Desktop, VS Code, Zed, Bruno, MongoDB Compass, draw.io,
-  Temurin JDK 25, `fnm` (Node version manager), and `uv` for Python
-- **Research:** JabRef, Tailscale, Zotero, AnyDesk, FileZilla (through Chocolatey), and NVIDIA Nsight
-  Systems for GPU profiling (downloaded as an MSI and launched interactively)
+  Temurin JDK 25, `fnm` (Node version manager), FFmpeg (shared build, so the DLLs are available to other
+  programs), and `uv` for Python
+- **Research:** JabRef, Tailscale, Zotero, AnyDesk, FileZilla (through Chocolatey)
+- **NVIDIA:** the CUDA 13.4.1 installer, which also installs the NVIDIA driver (downloaded as an `.exe`
+  and launched interactively)
 - **AI:** Ollama
 - **Messaging:** Telegram Desktop
 - **Editing:** GIMP 3, Inkscape
@@ -167,6 +181,40 @@ manually**:
 - Ryzen Master — <https://www.amd.com/en/products/software/ryzen-master.html>
 - Trust GXT 155 mouse software — <https://support.trust.com/en/support/solutions/articles/9000240828-gxt-155-caldor-gaming-mouse-black-20411>
 
+### 3. LaTeX — `latex.ps1`
+
+```powershell
+.\latex.ps1
+```
+
+Downloads the official **TeX Live** installer for Windows from CTAN, launches it interactively, and
+deletes it once the installation is finished. It is kept separate from `setup.ps1` because a full TeX Live
+installation is large and takes a long time.
+
+---
+
+## WSL setup
+
+[`windows/wsl.sh`](windows/wsl.sh) lives next to the Windows scripts, but it is a **bash script that runs
+inside a WSL distribution** (Ubuntu 24.04 or newer). Run it as your normal user, not with `sudo`; it calls
+`sudo` itself where needed, so it will ask for your password:
+
+```bash
+bash ./windows/wsl.sh
+```
+
+It sets up:
+
+- **SSH keys that just work.** Keys copied over from Windows usually land in WSL with the wrong
+  permissions, and `ssh` then refuses to use them. The script installs `keychain`, sets `~/.ssh` to `700`,
+  private keys to `600` and public keys to `644`, then lists every key pair it finds and asks whether to
+  load them into `keychain` from your `.bashrc`. Afterwards the SSH agent runs once per session and you
+  type each passphrase only once.
+- **Homebrew** for Linux, with `brew shellenv` added to your `.bashrc`.
+- **[Mutagen](https://mutagen.io/)** (through Homebrew), for fast two-way file sync between WSL, Windows
+  and remote machines.
+- **SingularityCE**, exactly as described in [SingularityCE](#singularityce).
+
 ---
 
 ## Linux setup
@@ -178,8 +226,8 @@ Everything is driven by [`linux/setup.sh`](linux/setup.sh). The script uses path
 repository root and refuses to run without root, so **run it with `sudo` from the top of the repository**:
 
 ```bash
-git clone https://github.com/<your-user>/sh-utils.git
-cd sh-utils
+git clone https://github.com/marcopetri98/lifesaving-utils.git
+cd lifesaving-utils
 sudo bash ./linux/setup.sh [options]
 ```
 
@@ -253,11 +301,12 @@ required for this part.
 Regardless of the flags, `setup.sh`:
 
 - **Commands** — runs `install_commands.sh` (see [Commands installed on your PATH](#commands-installed-on-your-path)).
-- **System basics** — `ca-certificates`, `curl`, `apt-transport-https`, `binutils`, `gnome-terminal`,
-  `flatpak` (with Flathub added), `cmake`, `gnupg`, `gawk`, plus `gnome-tweaks`,
-  `gnome-shell-extension-manager`, `gnome-themes-extra`, `gtk2-engines-murrine` and `sassc` for theming.
+- **System basics** — `ca-certificates`, `build-essential`, `curl`, `apt-transport-https`, `binutils`,
+  `gnome-terminal`, `flatpak` (with Flathub added), `cmake`, `gnupg`, `gawk`, `zip`, the gedit snap, plus
+  `gnome-tweaks`, `gnome-shell-extension-manager`, `gnome-themes-extra`, `gtk2-engines-murrine` and
+  `sassc` for theming.
 - **Shell** — [`ble.sh`](https://github.com/akinomyoga/ble.sh) for history-based autocompletion in bash,
-  sourced from your `.bashrc`.
+  sourced from your `.bashrc`, and **Homebrew** for Linux, with `brew shellenv` added to your `.bashrc`.
 - **Apps** — Bitwarden, Vivaldi, Thunderbird, Spotify, LibreOffice, Telegram (snaps); Zotero, FileZilla,
   Tailscale, AnyDesk, Anytype, Claude Desktop; Bottles (Flatpak) for running Windows apps.
 - **Development** — Git, Docker CE with the Compose and Buildx plugins
@@ -310,6 +359,29 @@ themes, no GNOME extensions, no desktop applications.
 
 ---
 
+## SingularityCE
+
+[`linux/install_singularity.sh`](linux/install_singularity.sh) installs
+[SingularityCE](https://sylabs.io/singularity/), the container runtime common on HPC clusters, so images
+can be built and tested locally before they go to a cluster. It is **not** called by `setup.sh`; run it on
+its own, as your normal user (it calls `sudo` itself):
+
+```bash
+bash ./linux/install_singularity.sh
+```
+
+SingularityCE has no apt package, so the script builds it from source:
+
+1. installs the build dependencies (`autoconf`, `libseccomp-dev`, `squashfs-tools`, `runc`, `uidmap`, …,
+   plus `libsubid-dev`, which only exists on **Ubuntu 24.04 and newer**);
+2. installs **Go 1.27.1** into `/usr/local/go` (replacing any previous copy) and adds it to your `PATH`
+   in `.bashrc`;
+3. downloads, builds and installs **SingularityCE 4.5.0**.
+
+[`windows/wsl.sh`](windows/wsl.sh) runs the same steps inside WSL.
+
+---
+
 ## Commands installed on your PATH
 
 [`linux/install_commands.sh`](linux/install_commands.sh) — called automatically as the very first step of
@@ -349,19 +421,63 @@ These live in [`powershell/`](powershell/) and are not called by `setup.ps1`; ru
 
 ---
 
+## Agent skills for Claude
+
+[`agents-skills/`](agents-skills/) holds the **agent skills** I use with Claude. A skill is a folder with a
+`SKILL.md` file: a YAML frontmatter with the skill's `name` and a `description` that tells Claude *when*
+to use it, followed by the instructions Claude follows once the skill is triggered. Keeping them here means
+the same skills are available on every machine and in every Claude client.
+
+| Skill | What it does |
+| --- | --- |
+| [`cefr-assessment`](agents-skills/cefr-assessment/SKILL.md) | Rates the English fluency of a text and assigns one CEFR level (A1–C2), with a short justification, one key strength and one key area to improve. It never rewrites the text. |
+| [`compare-english`](agents-skills/compare-english/SKILL.md) | Compares two versions of a text (Text A and Text B) on language quality only — fluency and vocabulary — and says which one wins, in five sentences at most. |
+| [`revise-english`](agents-skills/revise-english/SKILL.md) | Rewrites non-native English so it reads as native, keeping meaning, order of ideas, paragraphs and tone unchanged. Outputs only the revised text. |
+| [`thesis-proposal-review`](agents-skills/thesis-proposal-review/SKILL.md) | Critically reviews an MSc thesis proposal written by a supervisor: thesis vs. mere implementation, scope and timeline, ambiguities, framing, questions for the supervisor and a prioritised revision checklist. |
+
+### Packaging the skills
+
+Claude apps take skills as `.zip` uploads, with the skill folder at the top of the archive. Two
+equivalent scripts create one zip per skill folder (`cefr-assessment.zip`, `revise-english.zip`, …),
+replacing any zip left over from an earlier run. Run them from inside `agents-skills/`:
+
+```powershell
+# Windows
+cd agents-skills
+.\make_zips.ps1
+```
+
+```bash
+# Linux (needs the `zip` command, which setup.sh installs)
+cd agents-skills
+bash ./make_zips.sh
+```
+
+Then upload the zips in the Skills section of your Claude settings. For **Claude Code** no zip is
+needed: copy (or symlink) the skill folders into `~/.claude/skills/` to make them available in every
+project.
+
+To add a new skill, create a new folder with its own `SKILL.md` and run the zip script again.
+
+---
+
 ## Notes and caveats
 
 - **Always run the Linux scripts from the repository root.** They reference their helpers as
   `./linux/...`, so `cd linux && sudo bash setup.sh` will not find them.
 - **The scripts are not fully idempotent.** They are written for a clean install. Re-running `setup.sh`
   on a configured machine mostly works (apt/snap/winget skip what is present), but a few steps — cloning
-  `ble.sh`, appending lines to `.bashrc`, `groupadd docker` — will complain or duplicate entries.
+  `ble.sh`, appending lines (ble.sh, Homebrew, keychain) to `.bashrc`, `groupadd docker` — will complain
+  or duplicate entries.
+- **SingularityCE leaves its sources behind.** `install_singularity.sh` and `wsl.sh` download and build
+  SingularityCE in the current directory, so run them from a scratch folder (or delete the
+  `singularity-ce-*` tarball and folder afterwards) to keep the repository clean.
 - **`~` under `sudo`.** Some steps append to `~/.bashrc` while running as root; depending on your `sudo`
   configuration that may resolve to root's home rather than yours. If `ble.sh` or the `openvpn` alias
   does not show up in a new terminal, copy the corresponding line into your own `~/.bashrc`.
-- **Pinned versions.** Anytype, the NVIDIA container toolkit and Nsight Systems are pinned to specific
-  versions/URLs, and Isaac Sim accepts a fixed set of versions. Bump them in the scripts as new releases
-  land.
+- **Pinned versions.** Anytype on Linux (0.56.1), the NVIDIA container toolkit (1.19.0-1), CUDA on
+  Windows (13.4.1), Go (1.27.1) and SingularityCE (4.5.0) are pinned to specific versions/URLs, and Isaac
+  Sim accepts a fixed set of versions. Bump them in the scripts as new releases land.
 - **This is a personal setup.** The application lists are mine. If you fork this, the package lists in
   `windows/setup.ps1`, `windows/gaming.ps1` and `linux/setup.sh`, plus
   `linux/extensions/extensions.txt`, are the files you will want to edit first.
