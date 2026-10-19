@@ -33,6 +33,7 @@ winget install --id JGraph.Draw --source winget
 winget install --id EclipseAdoptium.Temurin.25.JDK --source winget
 winget install --id Schniz.fnm --source winget
 winget install --id Gyan.FFmpeg.Shared --source winget
+winget install --id DBBrowserForSQLite.DBBrowserForSQLite --source winget
 
 # Research
 winget install --id JabRef.JabRef --source winget
