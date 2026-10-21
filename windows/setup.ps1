@@ -48,8 +48,10 @@ Write-Host "Installing NVIDIA CUDA Drivers..."
 Start-Process .\NvidiaCudaDrivers.exe -wait
 rm .\NvidiaCudaDrivers.exe
 
-# AI
+# AI (Including ChatGPT and Claude Code)
 winget install --id Ollama.Ollama --source winget
+winget install --id Anthropic.Claude --source winget
+winget install --id 9PLM9XGG6VKS --source msstore
 
 # Messaging apps
 winget install --id Telegram.TelegramDesktop --source winget
