@@ -1,0 +1,9 @@
+[Unit]
+Description=Pause Mutagen session after repeated SSH failures
+
+[Service]
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/bin/mutagen-watchdog.sh
+
+[Install]
+WantedBy=default.target

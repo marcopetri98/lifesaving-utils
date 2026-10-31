@@ -44,6 +44,22 @@ brew trust mutagen-io/mutagen
 brew install mutagen-io/mutagen/mutagen
 
 ################################################################################
+# Mutagen watchdog to avoid failing for fail2ban on connection errors
+################################################################################
+mkdir -p ~/.local/bin
+mkdir -p ~/.config/systemd/user
+cp ./linux/mutagen-watchdog.sh ~/.local/bin/mutagen-watchdog.sh
+chmod +x ~/.local/bin/mutagen-watchdog.sh
+
+cp ./linux/systemd/mutagen-watchdog.service ~/.config/systemd/user/mutagen-watchdog.service
+if systemctl --user is-system-running >/dev/null 2>&1 || [ $? -eq 1 ]; then
+  systemctl --user daemon-reload
+  systemctl --user enable --now mutagen-watchdog
+else
+  echo "systemd not running: add '[boot]\nsystemd=true' to /etc/wsl.conf, run 'wsl --shutdown', then rerun."
+fi
+
+################################################################################
 # Install singularity
 ################################################################################
 sudo apt-get install -y \
