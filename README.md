@@ -396,7 +396,8 @@ not already there. **The result is that these are ordinary commands in every bas
 | [`update_system`](linux/commands/update_system) | Update everything in one go: `apt-get update && apt-get upgrade`, `snap refresh` and `flatpak update`. |
 
 Adding your own is a matter of dropping an executable file into `linux/commands/` and re-running
-`sudo bash ./linux/install_commands.sh` from the repository root.
+`bash ./linux/install_commands.sh` from the repository root (with or without `sudo`: either way the commands
+are installed for your user).
 
 ---
 
