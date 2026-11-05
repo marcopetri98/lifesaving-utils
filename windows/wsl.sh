@@ -44,6 +44,12 @@ else
 fi
 
 ################################################################################
+# Install basic dev tools
+################################################################################
+# Install uv for python
+curl -LsSf https://astral.sh/uv/install.sh | bash
+
+################################################################################
 # Install homebrew
 ################################################################################
 sudo apt-get install -y ca-certificates \
@@ -55,14 +61,11 @@ echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"' >> /home/$USE
 export PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH
 
 ################################################################################
-# Install mutagen
+# Install mutagen and mutagen watchdog to avoid failing for fail2ban
 ################################################################################
 brew trust mutagen-io/mutagen
 brew install mutagen-io/mutagen/mutagen
 
-################################################################################
-# Mutagen watchdog to avoid failing for fail2ban on connection errors
-################################################################################
 mkdir -p ~/.local/bin
 mkdir -p ~/.config/systemd/user
 cp ./linux/mutagen-watchdog.sh ~/.local/bin/mutagen-watchdog.sh
