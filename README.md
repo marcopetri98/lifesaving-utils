@@ -45,7 +45,7 @@ package lists for your own; the structure is meant to make that easy.
 │   ├── setup.ps1                #   Base system: apps, dev tools, research tools, CUDA
 │   ├── gaming.ps1               #   Game launchers, monitoring, gaming extras
 │   ├── latex.ps1                #   TeX Live distribution
-│   └── wsl.sh                   #   Run *inside* WSL: SSH keys, Homebrew, Mutagen, SingularityCE
+│   └── wsl.sh                   #   Run *inside* WSL: SSH keys, uv, FFmpeg, rclone, Homebrew, Mutagen, SingularityCE
 ├── powershell/                  # Standalone PowerShell utilities
 │   ├── sync-devices.ps1         #   Move work-in-progress changes between devices
 │   ├── disks.ps1                #   Create the standard folder structure on a data disk
@@ -211,6 +211,12 @@ It sets up:
   private keys to `600` and public keys to `644`, then lists every key pair it finds and asks whether to
   load them into `keychain` from your `.bashrc`. Afterwards the SSH agent runs once per session and you
   type each passphrase only once.
+- **FFmpeg** (shared build from [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds)), unpacked in
+  `/opt/ffmpeg`. The libraries are registered with `ldconfig` through `/etc/ld.so.conf.d/ffmpeg.conf`, so
+  every process finds them without `LD_LIBRARY_PATH`, and `ffmpeg`, `ffprobe` and `ffplay` are linked into
+  `/usr/local/bin`.
+- **[rclone](https://rclone.org/)** (latest release), installed in `/usr/local/bin` so every user and script
+  has it on the `PATH`. The script skips it if `rclone` is already installed.
 - **Homebrew** for Linux, with `brew shellenv` added to your `.bashrc`.
 - **[Mutagen](https://mutagen.io/)** (through Homebrew), for fast two-way file sync between WSL, Windows
   and remote machines.
@@ -478,8 +484,9 @@ To add a new skill, create a new folder with its own `SKILL.md` and run the zip 
   configuration that may resolve to root's home rather than yours. If `ble.sh` or the `openvpn` alias
   does not show up in a new terminal, copy the corresponding line into your own `~/.bashrc`.
 - **Pinned versions.** Anytype on Linux (0.56.1), the NVIDIA container toolkit (1.19.0-1), CUDA on
-  Windows (13.4.1), Go (1.27.1) and SingularityCE (4.5.0) are pinned to specific versions/URLs, and Isaac
-  Sim accepts a fixed set of versions. Bump them in the scripts as new releases land.
+  Windows (13.4.1), Go (1.27.1), SingularityCE (4.5.0) and FFmpeg in WSL (9.0) are pinned to specific versions/URLs, and
+  Isaac Sim accepts a fixed set of versions. Bump them in the scripts as new releases land. To upgrade
+  FFmpeg, delete `/opt/ffmpeg` first, because `wsl.sh` skips the download when that folder exists.
 - **This is a personal setup.** The application lists are mine. If you fork this, the package lists in
   `windows/setup.ps1`, `windows/gaming.ps1` and `linux/setup.sh`, plus
   `linux/extensions/extensions.txt`, are the files you will want to edit first.

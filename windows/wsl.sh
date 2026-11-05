@@ -49,6 +49,37 @@ fi
 # Install uv for python
 curl -LsSf https://astral.sh/uv/install.sh | bash
 
+# Install the FFmpeg shared libraries. They are registered with ldconfig instead
+# of LD_LIBRARY_PATH so that every process finds them, including scripts and
+# non-interactive shells that never read .bashrc
+sudo apt-get install -y xz-utils
+
+FFMPEG_DIR=/opt/ffmpeg
+FFMPEG_NAME=ffmpeg-n9.0-latest-linux64-gpl-shared-9.0
+if [ ! -d "$FFMPEG_DIR" ]; then
+  tmp="$(mktemp -d)"
+  curl -LsSf "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/${FFMPEG_NAME}.tar.xz" \
+    | tar xJ -C "$tmp"
+  sudo chown -R root:root "$tmp/$FFMPEG_NAME"
+  sudo mv "$tmp/$FFMPEG_NAME" "$FFMPEG_DIR"
+  rm -rf "$tmp"
+fi
+echo "$FFMPEG_DIR/lib" | sudo tee /etc/ld.so.conf.d/ffmpeg.conf > /dev/null
+sudo ldconfig
+sudo ln -sf "$FFMPEG_DIR"/bin/* /usr/local/bin/
+
+# Install rclone in /usr/local/bin so that it is on the PATH of every user and
+# script
+sudo apt-get install -y unzip
+
+if ! command -v rclone > /dev/null; then
+  tmp="$(mktemp -d)"
+  curl -LsSf https://downloads.rclone.org/rclone-current-linux-amd64.zip -o "$tmp/rclone.zip"
+  unzip -q "$tmp/rclone.zip" -d "$tmp"
+  sudo install -D -m 755 "$tmp"/rclone-*-linux-amd64/rclone /usr/local/bin/rclone
+  rm -rf "$tmp"
+fi
+
 ################################################################################
 # Install homebrew
 ################################################################################
