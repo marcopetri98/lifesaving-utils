@@ -2,6 +2,18 @@
 set -e
 
 ################################################################################
+# Copy ssh keys from Windows
+################################################################################
+sudo apt-get update
+sudo apt-get upgrade
+
+################################################################################
+# Copy ssh keys from Windows
+################################################################################
+mkdir -p /home/$USER/.ssh
+cp -r /mnt/c/Users/$USER/.ssh/. /home/$USER/.ssh/
+
+################################################################################
 # Setup ssh agent such that it always works with keys
 ################################################################################
 sudo apt-get install -y keychain
@@ -35,7 +47,7 @@ sudo apt-get install -y ca-certificates \
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 echo >> /home/$USER/.bashrc
 echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"' >> /home/$USER/.bashrc
-source /home/$USER/.bashrc
+export PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH
 
 ################################################################################
 # Install mutagen
@@ -68,8 +80,8 @@ sudo apt-get install -y \
    cryptsetup \
    fuse2fs \
    git \
-   fuse \
-   libfuse-dev \
+   fuse3 \
+   libfuse3-dev \
    libseccomp-dev \
    libtool \
    pkg-config \

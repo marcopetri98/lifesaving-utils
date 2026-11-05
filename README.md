@@ -205,8 +205,9 @@ bash ./windows/wsl.sh
 
 It sets up:
 
-- **SSH keys that just work.** Keys copied over from Windows usually land in WSL with the wrong
-  permissions, and `ssh` then refuses to use them. The script installs `keychain`, sets `~/.ssh` to `700`,
+- **SSH keys that just work.** The script first copies everything in `/mnt/c/Users/$USER/.ssh` into
+  `~/.ssh`, so your WSL username must match your Windows one. Keys copied over from Windows land in WSL
+  with the wrong permissions, and `ssh` then refuses to use them. The script installs `keychain`, sets `~/.ssh` to `700`,
   private keys to `600` and public keys to `644`, then lists every key pair it finds and asks whether to
   load them into `keychain` from your `.bashrc`. Afterwards the SSH agent runs once per session and you
   type each passphrase only once.
