@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Read-only snapshot of cluster load and of the current user's standing.
-# Used to decide between a chained array on `normal` and a run on `bulk`.
+# Used to decide between `bulk` (when it can start now) and `normal`.
 set -uo pipefail
 
 me="$(id -un)"
@@ -29,6 +29,10 @@ done
 echo
 echo "== Preemption settings of bulk =="
 scontrol show partition bulk 2>/dev/null | grep -Eio '(PreemptMode|PriorityTier|MaxTime|DefaultTime)=[^ ]+' | paste -sd' ' -
+
+echo
+echo "== Can bulk start now, and who could preempt it? =="
+bash "$(dirname "$0")/bulk_availability.sh" || echo "(could not check bulk availability)"
 
 echo
 echo "== My fair share compared with the other users =="

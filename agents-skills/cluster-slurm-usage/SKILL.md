@@ -1,6 +1,6 @@
 ---
 name: cluster-slurm-usage
-description: Operate the user's university HPC cluster through SLURM - inspect the queue and partitions, choose a partition, write and submit sbatch jobs, monitor them and cancel the user's own jobs. Use whenever the user mentions the cluster, HPC, SLURM, sbatch, srun, squeue, scancel, GPUs on the cluster, job arrays, partitions (cpu, debug, normal, bulk), fair share or preemption, or asks to run, schedule, check or stop a job there.
+description: Operate the user's university HPC cluster through SLURM - inspect the queue and partitions, choose a partition, write and submit sbatch jobs, monitor them and cancel the user's own jobs. Use whenever the user mentions the cluster, HPC, SLURM, sbatch, srun, squeue, scancel, GPUs on the cluster, job arrays, partitions (cpu, debug, normal, bulk), idle GPUs, fair share or preemption, or asks to run, schedule, check or stop a job there.
 ---
 
 # Cluster SLURM Usage
@@ -88,7 +88,7 @@ acting on them is forbidden.
 | `cpu` | none (CPU only) | 5 days | no |
 | `debug` | at most 1 | 2 hours | no |
 | `normal` | at most 3 | 1 day | no |
-| `bulk` | any number | 5 days | **yes** |
+| `bulk` | any number | 5 days | **yes**, by `normal` and `debug` jobs |
 
 **Time limits: never pass `--time` / `-t`.** Each partition's default time is
 already its maximum, so omitting it gives the job the full allowance. If
@@ -110,34 +110,94 @@ Apply the first rule that fits.
    `debug`. For an interactive shell:
    `srun -p debug --gres=gpu:l4:1 --comment=vram=16G --mem=16G --cpus-per-gpu=4 --pty bash`
    (adapt the model and sizes as in "Choosing the GPU").
-3. **GPU runs up to 1 day with 1–3 GPUs** → `normal`, a single job.
-4. **GPU runs longer than 1 day with 1–3 GPUs** → by default, a **chained job
-   array on `normal`**: `--array=0-<N-1>%1`, where N = ceil(expected days) + 1
-   for margin. The `%1` throttle lets only one task run at a time, so the
-   tasks execute one after another, each with the full 1-day limit, and the
-   run can go on for 5 days or longer without ever being preempted. This needs
-   a program that saves checkpoints and resumes from the latest one; verify it
-   in the code or ask. See "Job scripts" below for how to write it.
-5. **Use `bulk` instead of rule 3 or 4 only when the cluster is under-utilised
-   and the user's fair share is good** (see "Judging fair share"). Check both
-   with a fresh `bash scripts/cluster_status.sh` snapshot:
-   - `bulk` has at least as many idle GPUs as the job needs;
-   - with a **good** fair share, no GPU jobs should be pending in `normal`
-     and `bulk`; with a **very good** one, a short pending queue is
-     acceptable, because the user's jobs will be scheduled ahead of most.
-
-   This is a heuristic. If the picture is mixed, prefer the chained `normal`
-   array or ask the user.
-6. **More than 3 GPUs in one job** → only `bulk` allows it. Say so explicitly,
-   warn about preemption and make sure the program checkpoints. All GPUs of a
-   job sit on one node, so the chosen model caps the count (see
-   "Cluster details").
+3. **Every other GPU job: first check whether `bulk` can start it right
+   now.** If it can, **always prefer `bulk`** over rules 4–5. See "Starting
+   on bulk right away" below. Runs up to 5 days are a single job. Longer runs
+   are a chained array on `bulk` (`%1`, N = ceil(days / 5) + 1), whose later
+   tasks may have to wait for idle GPUs.
+4. **Bulk cannot start now, GPU runs up to 1 day with 1–3 GPUs** → `normal`,
+   a single job.
+5. **Bulk cannot start now, GPU runs longer than 1 day with 1–3 GPUs** → a
+   **chained job array on `normal`**: `--array=0-<N-1>%1`, where
+   N = ceil(expected days) + 1 for margin. The `%1` throttle lets only one
+   task run at a time, so the tasks execute one after another, each with the
+   full 1-day limit, and the run can go on for 5 days or longer without ever
+   being preempted. This needs a program that saves checkpoints and resumes
+   from the latest one; verify it in the code or ask. See "Job scripts"
+   below for how to write it.
+6. **More than 3 GPUs in one job** → only `bulk` allows it. If it cannot
+   start now, it queues there behind the other `bulk` jobs, ranked by fair
+   share. Say so explicitly, warn about preemption and make sure the program
+   checkpoints. All GPUs of a job sit on one node, so the chosen model caps
+   the count (see "Cluster details").
 
 Jobs on `bulk` can be preempted at any time. Always submit them with
 `--requeue` and `--open-mode=append`, check the preemption mode with
 `scontrol show partition bulk | grep -i preempt` (`REQUEUE` restarts the
 job; `CANCEL` kills it, in which case also use a chained array), and make
 sure the program resumes from its last checkpoint.
+
+### Starting on bulk right away
+
+`bulk` jobs never preempt `normal` or `debug` jobs: they start only on GPUs
+that are idle at that moment, and `normal` and `debug` jobs preempt them
+later. (The one exception among `bulk` jobs is described in "Scheduling and
+preemption".) A `bulk` job
+that starts immediately is still the better deal: it runs now, costs less fair
+share per GPU-hour, may run for 5 days, and leaves the user's 3-GPU `normal`
+allowance free. Its only drawback is the chance of being preempted, and that
+chance is low when the users who could preempt it are already capped.
+
+1. **Snapshot.** Run `bash scripts/bulk_availability.sh` (it is also part of
+   `scripts/cluster_status.sh`). It is self-contained, so from a machine
+   other than the cluster it can run as
+   `ssh <host> 'bash -s' < scripts/bulk_availability.sh`. It prints:
+   - idle GPUs, idle CPUs and free RAM per node of `bulk`;
+   - pending `normal`/`debug` GPU jobs per model, classed as `ready`
+     (waiting only for priority or resources, so it can preempt soon),
+     `dependency` (it becomes ready once its dependency is met) or `capped`
+     (blocked by a per-user limit such as `QOSMaxGRESPerUser`);
+   - every user active on `normal`/`debug`, with their running GPUs against
+     their QoS limit: `MAXED` users cannot start another `normal` job until
+     one of theirs ends;
+   - a summary per GPU model.
+2. **Candidates.** A model is a candidate if a single node has at least N
+   idle GPUs, its VRAM range covers the estimated peak (see "Choosing the
+   GPU"), and that node has enough idle CPUs and free RAM for the request.
+   If the user already holds 3 GPUs on `normal`, any new `normal` job would
+   be capped, which makes `bulk` all the more attractive.
+3. **Preemption risk per candidate.** A `normal`/`debug` job only runs on
+   the smallest model that matches its VRAM declaration (or on the model
+   pinned in its `--gres`), so only demand for the same model can preempt
+   the `bulk` job.
+   - **Low:** no `ready` or `dependency` GPUs pending for that model, and
+     every other user active on `normal` is `MAXED` (or nobody is active).
+   - **Medium:** no `ready` or `dependency` demand for that model, but some
+     users still have headroom and could submit new `normal` jobs at any
+     time.
+   - **High:** `ready` or `dependency` GPUs are pending for that model.
+     When those jobs become startable they claim GPUs on that model, and
+     with no free GPUs left they preempt `bulk` jobs.
+
+   `capped` jobs are no immediate threat. When one of that user's jobs ends,
+   the capped job usually takes over the GPUs it freed.
+4. **Pick.** Prefer the candidate with the lowest risk, and among equal
+   risks the cheapest model (see the cost column in "Cluster details"). Pin
+   it with `--gres=gpu:<model>:N` and set `vram` to at least that model's
+   lower bound (see "Choosing the GPU").
+5. **Confirm** with a dry run, which submits nothing but passes the
+   submission checks:
+   `sbatch --test-only -p bulk --gres=gpu:<model>:N --comment=vram=<size> --mem=<mem> --cpus-per-gpu=<c> --wrap=true`.
+   It prints `Job … to start at <time> … on nodes <node>`. If the time is
+   within a minute or so of now, the job starts immediately. If it is later,
+   `bulk` cannot start now: go back to rules 4–6.
+6. **Exception.** If the program cannot resume from checkpoints, a
+   preemption restarts it from scratch. Use `bulk` for such a program only
+   when the risk is low or the run takes at most a few hours; otherwise use
+   `normal` and say why.
+
+The snapshot is only valid for a short time. Submit right after confirming
+the start, and check that the job is `R` with `squeue --me`.
 
 ## Judging fair share
 
@@ -162,8 +222,10 @@ and every role (account), so the comparison is always possible.
   of all users on the cluster.
 
 The script prints both checks and a verdict: `VERY GOOD`, `GOOD` or
-`NEITHER`. Run it before every submission, not only when considering
-`bulk`, because the final report must include it.
+`NEITHER`. Run it before every submission, because the final report must
+include it. It does not matter for a `bulk` job that starts right away on
+idle GPUs. It does matter for jobs that wait in a queue, including `bulk`
+jobs that cannot start now.
 
 ## Choosing the GPU
 
@@ -178,14 +240,20 @@ Decide the GPU model yourself for every GPU job, then pin it:
    "Cluster details"). Default to the smallest model whose range covers the
    peak: it costs the least fair share. Choose a larger one only with a
    reason you state to the user, such as markedly faster training on a long
-   run, or the smaller model's queue being long.
+   run, or the smaller model's queue being long. On `bulk`, the choice is
+   limited to the models that have idle GPUs now and that carry the lowest
+   preemption risk (see "Starting on bulk right away"). A larger idle model
+   that lets the job start now beats waiting for the smallest one.
 3. **Pin the hardware** with `--gres=gpu:<model>:N`, so the logs and
    `sacct` show exactly which hardware ran the job.
 4. **Set `--comment=vram=<size>`** to the larger of the estimated peak and
    the lower bound of the chosen model's range, so no smaller model could
    ever match. It must stay within the chosen model's range. Example: a
    15G peak run on an RTX A6000 gets
-   `--gres=gpu:nvidia_rtx_a6000:1 --comment=vram=25G`.
+   `--gres=gpu:nvidia_rtx_a6000:1 --comment=vram=25G`. On `bulk` this
+   matters even more: with a declaration below the model's lower bound, the
+   job only borrows that GPU, and a `bulk` job that really needs the model
+   can preempt it (see "Scheduling and preemption").
 
 ## Job scripts
 
@@ -253,6 +321,11 @@ Whenever you submitted jobs, your final message must also state:
   the number of tasks), GPU model and count, `vram`, CPUs and memory, the
   job script used, the job IDs, and one sentence on why, linking the choice
   to the fair-share verdict and the cluster load.
+- **Bulk check:** whether `bulk` could start the job now (idle GPUs on the
+  chosen node, the `--test-only` start time) and, for a `bulk` job, the
+  preemption risk (low, medium or high) with its reason, e.g. "low: no
+  pending normal/debug demand for l4; 3 of the 4 users active on normal are
+  MAXED".
 
 ## Cluster details
 
@@ -318,6 +391,19 @@ rejected with an explanation.
 - A preempted `bulk` job is requeued and **restarts from the first line of
   the script**. Job scripts must therefore be safe to run again: resume from
   checkpoints, and avoid setup steps that fail when repeated.
+- QoS limits (`sacctmgr show qos format=Name,MaxTRESPU,MaxJobsPU,Preempt`):
+  `normal` allows 3 GPUs per user and `debug` 1 GPU and 1 job per user.
+  Jobs over the limit stay pending as `QOSMaxGRESPerUser`. The `msc_*` and
+  `external_*` QoS have their own limits. `bulk` has no per-user GPU limit.
+- Who preempts whom: the `normal` and `debug` QoS (including `msc_*` and
+  `external_*`) preempt every `bulk` QoS. A plain `bulk` job preempts
+  nobody. The tiered `bulk_<size>` QoS (`bulk_24g`, `bulk_47g`,
+  `bulk_95g`), which follow the VRAM declaration, preempt `bulk` jobs of
+  lower tiers that are borrowing a larger GPU. A `bulk` job whose `vram`
+  is at least its model's lower bound is therefore safe from other `bulk`
+  jobs.
+- `sbatch --test-only` runs the submission checks and reports the partition
+  as `bulk_base`. That name is internal; still submit with `-p bulk`.
 
 ## When the cluster disagrees with this skill
 
