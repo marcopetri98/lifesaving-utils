@@ -2,10 +2,14 @@
 set -e
 
 ################################################################################
-# Copy ssh keys from Windows
+# Copy ssh keys from Windows and install basic packages
 ################################################################################
 sudo apt-get update
 sudo apt-get upgrade
+
+sudo apt-get install -y \
+   bubblewrap \
+   socat
 
 ################################################################################
 # Install custom commands
