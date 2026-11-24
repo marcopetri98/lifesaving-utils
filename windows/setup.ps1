@@ -35,6 +35,15 @@ winget install --id Schniz.fnm --source winget
 winget install --id Gyan.FFmpeg.Shared --source winget
 winget install --id DBBrowserForSQLite.DBBrowserForSQLite --source winget
 
+# Flutter
+Write-Output "Now downloading and installing Flutter..."
+Invoke-WebRequest -Uri "https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_3.50.1-stable.zip" -OutFile "flutter.zip"
+mkdir "$env:USERPROFILE\develop"
+Expand-Archive -Path "flutter.zip" -DestinationPath "$env:USERPROFILE\develop"
+$newPath = "$env:USERPROFILE\develop\bin"
+$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+[Environment]::SetEnvironmentVariable("Path", "$userPath$newPath;", "User")
+
 # Research
 winget install --id JabRef.JabRef --source winget
 winget install --id Tailscale.Tailscale --source winget
@@ -51,6 +60,7 @@ rm .\NvidiaCudaDrivers.exe
 # AI (Including ChatGPT and Claude Code)
 winget install --id Ollama.Ollama --source winget
 winget install --id Anthropic.Claude --source winget
+winget install --id Anthropic.ClaudeCode --source winget
 winget install --id 9PLM9XGG6VKS --source msstore
 
 # Messaging apps
