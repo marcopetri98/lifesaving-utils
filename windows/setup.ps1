@@ -1,6 +1,6 @@
 # Basic windows functionality
 winget install --id Microsoft.PowerShell --source winget
-winget install --id Vivaldi.Vivaldi --source winget
+winget install --id Google.Chrome --source winget
 winget install --id Adobe.Acrobat.Reader.64-bit --source winget
 winget install --id PDFgear.PDFgear --source winget
 winget install --id Bitwarden.Bitwarden --source winget
