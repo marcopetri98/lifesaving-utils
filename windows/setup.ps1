@@ -34,6 +34,7 @@ winget install --id EclipseAdoptium.Temurin.25.JDK --source winget
 winget install --id Schniz.fnm --source winget
 winget install --id Gyan.FFmpeg.Shared --source winget
 winget install --id DBBrowserForSQLite.DBBrowserForSQLite --source winget
+winget install --id BurntSushi.ripgrep.MSVC --source winget
 
 # Flutter
 Write-Output "Now downloading and installing Flutter..."
